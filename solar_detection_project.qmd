@@ -1,0 +1,103 @@
+---
+title: "solar_detection"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+library(here)
+library(mapview)
+library(tidycensus)
+```
+
+## Read in the Data
+
+```{r}
+solar_oahu <- st_read(here("data/oahu_solar_dedup_simple.geojson"))
+
+```
+
+```{r}
+mapview(solar_oahu)
+```
+
+## Retrieve some census data
+
+```{r}
+oahu_income <- get_acs(geography = "tract",
+                          variables = "B19013_001",
+                          state = "HI",
+                          county = "Honolulu",
+                          geometry = TRUE,
+                          year = 2022)
+```
+
+```{r}
+mapview(oahu_income, zcol = "estimate")
+```
+
+```{r}
+mapview(oahu_income, zcol = "moe")
+```
+
+```{r}
+ggplot(oahu_income, aes(x=estimate,y=moe))+
+  geom_point()+
+  geom_smooth(method = "lm")
+```
+
+```{r}
+clean_solar_oahu <- solar_oahu|>
+  filter(!st_is_empty(geometry)) |> 
+  st_make_valid() |> 
+  st_transform(crs = 26904)
+
+oahu_tracts <- oahu_income |> 
+  st_make_valid() |> 
+  st_transform(crs = 26904)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+## Filter out low pop high solar
+
+```{r}
+
+```
+
+## Scatterplot
+
+```{r}
+
+```
+
+## Write Up
+
+```{r echo= FALSE}
+
+```
