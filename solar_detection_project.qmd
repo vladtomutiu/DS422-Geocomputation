@@ -10,6 +10,7 @@ library(sf)
 library(here)
 library(mapview)
 library(tidycensus)
+library(dplyr)
 ```
 
 ## Read in the Data
@@ -61,43 +62,95 @@ oahu_tracts <- oahu_income |>
 ```
 
 ```{r}
+# give tract an area in m^2
+oahu_tracts <- oahu_tracts |>
+  mutate(tract_area_m2 = as.numeric(st_area(geometry)))
 
+# Intersect solar panels and tracts
+solar_by_tract <- st_intersection(clean_solar_oahu, oahu_tracts)
+
+# find solar area
+solar_by_tract <- solar_by_tract |>
+  mutate(solar_area_m2 = as.numeric(st_area(geometry)))
+
+# summarise
+solar_summary <- solar_by_tract |>
+  st_drop_geometry() |>
+  group_by(GEOID) |>
+  summarise(total_solar_area_m2 = sum(solar_area_m2), .groups = "drop")
+
+# join back the solar panels and tracks in order to map
+oahu_tracts_solar <- oahu_tracts |>
+  left_join(solar_summary, by = "GEOID") |>
+  mutate(
+    total_solar_area_m2 = replace_na(total_solar_area_m2, 0),
+    pct_tract_solar = total_solar_area_m2 / tract_area_m2 * 100
+  )
 ```
 
 ```{r}
-
+mapview(oahu_tracts_solar, zcol = "pct_tract_solar", label = oahu_tracts_solar$NAME)
 ```
 
 ```{r}
-
+mapview(oahu_tracts_solar, zcol = "total_solar_area_m2")
 ```
 
 ```{r}
-
+mapview(oahu_tracts_solar, zcol = "estimate")
 ```
 
 ```{r}
-
+mapview(oahu_tracts_solar, zcol = "total_solar_area_m2") + mapview(oahu_tracts_solar, zcol = "estimate")
 ```
 
 ```{r}
-
+oahu_population_tract <- get_acs(geography = "tract",
+                          variables = "B01001_001",
+                          state = "HI",
+                          county = "Honolulu",
+                          geometry = FALSE,
+                          year = 2022)
 ```
 
-## Filter out low pop high solar
+```{r}
+oahu_population_tract <- rename(oahu_population_tract, population_estimate = estimate, population_moe = moe)
+```
 
 ```{r}
+full_data <- left_join(oahu_tracts_solar, oahu_population_tract, by = 'GEOID')
 
+full_data <- full_data |> 
+  select(-c(NAME.y, variable.y))
+```
+
+## Filter out tracts with low populations and high solar
+
+```{r}
+full_data <- full_data |> 
+  filter(!(estimate < 200 & total_solar_area_m2 > 100))
 ```
 
 ## Scatterplot
 
 ```{r}
+library(ggpubr)
 
+ggplot(full_data, aes(x = estimate, y = total_solar_area_m2))+ 
+  geom_point(color="gold") + 
+  geom_smooth(method = "lm")+
+  theme_minimal()+
+  stat_cor()
 ```
 
 ## Write Up
 
-```{r echo= FALSE}
+This project that I made for DS-422 Geocomputation maps rooftop solar panels in Honolulu County and checks whether they relate to income. The solar data comes from a SAM3 scan of Oahu made by Connor Flynn and other members of Chaminade University and uses the income data from the U.S. Census API. The scan is not entirely accurate but gives more data on the solar panels than is publicly available and the census API may also be slightly inaccurate. This means that the work will not be perfect and cannot be taken as 100% fact.
 
-```
+The goal of this project is to look for a correlation between income and solar panels. Using the sf package, I compared census tracts and their shapes with solar shapes, trying to find overlap. This allowed me to get specific solar area for each tract. Looking into the data, there were large tracts on Oahu with solar farms. Due to these solar farms, these tracts had little to no residents. This was a problem as it does not give an accurate reading on whether higher income means more solar on roofs. Adding census population data helped me fix the solar farm problem, since I removed tracts with more than 100 square meters of solar and less than 200 people.
+
+In order to solve the question of if solar panels correlates to income I made a scatterplot with a linear regression line. The area of Solar Panels in meters squarred is on the y axis, and median income is on the x axis and has a statistically significant correlation (R) of 0.21.
+
+When looking at the scatterplot yourself, you can immediately see some extreme outliers. It is not certain, but it is very likely that these Solar Panels are not relates to individuals houses and therefore do not help analyze our question. If we were to have more data, and potentially be able to take out these data points, it may help increase the correlation. Overall I believe there is a correlation, and while not strong, there would be ways with more accurate data to show more accurate and statistically significant correlation.
+
+Some ways I would improve this project, I would try to get more accurate SAM3 results so that they are more accurate to the state’s solar panels. I would try to find or have data that does not have any solar farms by finding and removing their individual panels, maybe with a proximity algorithm.
