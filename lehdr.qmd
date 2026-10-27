@@ -197,88 +197,91 @@ m
 Challenge 1: Recreate [this figure](https://github.com/jamgreen/lehdr/blob/master/vignettes/figures/fig1_balt_self_containment.png) for Hawaii
 
 ```{r}
-hi_od_tract <- grab_lodes(
+od_hi <- grab_lodes(
   state      = "hi",
   year       = 2022,
   lodes_type = "od",
   job_type   = "JT00",
   segment    = "S000",
   state_part = "main",
-  agg_geo    = "tract",
-  geometry   = FALSE
-) |>
-  dplyr::filter(substr(h_tract, 1, 5) == "15003",
-                substr(w_tract, 1, 5) == "15003")
-
-resident <- hi_od_tract |>
-  dplyr::group_by(tract = h_tract) |>
-  dplyr::summarise(workers_out = sum(S000), .groups = "drop")
-
-jobs <- hi_od_tract |>
-  dplyr::group_by(tract = w_tract) |>
-  dplyr::summarise(workers_in = sum(S000), .groups = "drop")
-
-same <- hi_od_tract |>
-  dplyr::filter(h_tract == w_tract) |>
-  dplyr::group_by(tract = h_tract) |>
-  dplyr::summarise(live_and_work = sum(S000), .groups = "drop")
-
-commute_oahu <- resident |>
-  dplyr::full_join(jobs, by = "tract") |>
-  dplyr::left_join(same, by = "tract") |>
-  dplyr::mutate(dplyr::across(c(workers_out, workers_in, live_and_work),
-                              ~tidyr::replace_na(.x, 0)),
-                net_flow = workers_in - workers_out,
-                self_containment = live_and_work / workers_out)
+  agg_geo    = "tract"
+)
 ```
 
 ```{r}
-library(tigris)
-library(sf)
-library(dplyr)
-library(ggplot2)
+commute_hi <- compute_commute_stats(od_hi, agg_geo = "tract")
+```
 
-oahu_tracts_sf <- tracts(state = "HI", county = "Honolulu", cb = TRUE, year = 2022) |>
-  st_transform(4326)
+```{r}
+hi_geo <- tracts(state = "HI", year = 2022, cb = TRUE) %>%
+  select(GEOID, geometry)
+```
 
-cent <- st_centroid(oahu_tracts_sf) |> st_coordinates()
-oahu_tracts_sf <- oahu_tracts_sf[cent[, "X"] > -158.4 & cent[, "X"] < -157.6 &
-                                   cent[, "Y"] > 21.2  & cent[, "Y"] < 21.8, ]
+```{r}
+commute_map_df <- hi_geo %>%
+  left_join(commute_hi, by = c("GEOID" = "tract"))
+```
 
-commute_map <- oahu_tracts_sf |>
-  left_join(commute_oahu, by = c("GEOID" = "tract"))
-
-ggplot(commute_map) +
-  geom_sf(aes(fill = self_containment), color = "white", linewidth = 0.1) +
-  scale_fill_viridis_c(name = "Self-\ncontainment",
-                       labels = scales::percent,
-                       na.value = "grey85") +
-  labs(title = "Share of resident workers who also work in their tract, Oahu (LODES 2022)") +
-  theme_void()
+```{r}
+mapview(commute_map_df, zcol = "self_containment")
 ```
 
 Challenge 2: Recreate t[his figure](https://github.com/jamgreen/lehdr/blob/master/vignettes/figures/fig2_md_job_change.png) for a state of your choosing
 
 ```{r}
-ca_jobs <- grab_lodes(
-  state      = "ca",
+wac_ia_panel <- grab_lodes(
+  state      = "ia",
   year       = c(2012, 2022),
   lodes_type = "wac",
   job_type   = "JT00",
   segment    = "S000",
   agg_geo    = "county"
 )
+```
 
-change_ca <- compute_lodes_change(
-  ca_jobs,
+```{r}
+change_ia <- compute_lodes_change(
+  wac_ia_panel,
   geo_col      = "w_county",
   base_year    = 2012,
   compare_year = 2022,
-  variables    = c("C000", "CE01", "CE02", "CE03")
+  variables    = "C000"
 )
+```
 
-change_ca |>
-  dplyr::arrange(dplyr::desc(C000_change)) |>
-  dplyr::select(w_county, C000_base, C000_compare, C000_change, C000_pct_change) |>
-  head(10)
+```{r}
+ia_county_geo <- counties(state = "ia", year = 2022, cb = FALSE) %>%
+  mutate(GEOID = paste0(STATEFP, COUNTYFP)) %>%
+  select(GEOID, geometry)
+
+
+```
+
+```{r}
+change_map_df <- ia_county_geo %>%
+  left_join(change_ia, by = c("GEOID" = "w_county"))
+```
+
+```{r}
+fig2 <- ggplot(change_map_df) +
+  geom_sf(aes(fill = C000_pct_change), color = "white", linewidth = 0.3) +
+  scale_fill_distiller(
+    palette   = "RdYlBu",
+    direction = 1,
+    name      = "% change",
+    labels    = label_percent(accuracy = 1, scale = 1),
+    na.value  = "grey85"
+  ) +
+  labs(
+    title    = "Job growth by county, Iowa, 2012\u20132022",
+    subtitle = "Percent change in total jobs (WAC, all job types)",
+    caption  = "Source: U.S. Census Bureau LODES via lehdr"
+  ) +
+  theme_bw()
+
+ggsave("fig2_md_job_change.png", fig2, width = 7.5, height = 5, dpi = 300)
+```
+
+```{r}
+fig2
 ```
