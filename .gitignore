@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+rm 'data/eaglei_outages_2025.csv'
+data/eaglei_outages_2025.csv
