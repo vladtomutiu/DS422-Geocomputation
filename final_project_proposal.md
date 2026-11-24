@@ -32,7 +32,7 @@ List each dataset and where it comes from (agency, website, link). Note the form
 
 -   **Transit schedules (GTFS) for Muni, BART, and AC Transit**
 
--    **OpenStreetMap street network extract**
+-   **OpenStreetMap street network extract**
 
 ------------------------------------------------------------------------
 
@@ -60,8 +60,8 @@ Give the link below. Add a sentence or two on why each source is relevant to you
     [trid.trb.org/View/2706623](https://trid.trb.org/View/2706623)\
     This article gives information on transit job access for census tracts with a cumulative-opportunity method and compares it across household income and other vulnerability factors. It includes San Jose, which is in the bay area and close to the area my research question is in.
 
-2.  **TransitCenter. “The San Francisco-Oakland Story” (Transit Equity Dashboard).**\
-    [dashboard.transitcenter.org/story/sf](https://dashboard.transitcenter.org/story/sf)\
+2.  **TransitCenter Data for San Francisco and Oakland Area.**\
+    <https://dashboard.transitcenter.org/map?date=20250324&period=WEDAM&opportunity=C000&tripOption=c45&autoRatio=false&affordableTrips=all&dots=none&transitLines=false#10.36/37.7713/-122.537>\
     Study that shows that Black, Asian, and other BIPOC residents have less access to jobs and services than white residents, and that the average resident can reach far more jobs by car than by transit within 45 minutes.
 
 3.  **Pereira, R. H. M., Saraiva, M., Herszenhut, D., Braga, C. K. V., & Conway, M. W. (2021). “r5r: Rapid Realistic Routing on Multimodal Transport Networks with R5 in R.” *Findings*.**\
